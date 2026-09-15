@@ -7,7 +7,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/12.9.0/firebase
 
 // Your Firebase config
 const firebaseConfig = {
-    apiKey: "AIzaSyBgprqfnohvuNsTYwTtpA0Bp_oams0SgSQ",
+    apiKey: "",
     authDomain: "talentforge11.firebaseapp.com",
     projectId: "talentforge11",
     storageBucket: "talentforge11.firebasestorage.app",
