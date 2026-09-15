@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incharge Dashboard | GreenLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles/global.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 1rem 3rem;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+        }
+        .header-left { display: flex; align-items: center; gap: 0.8rem; }
+        .header-left .icon { font-size: 1.5rem; filter: drop-shadow(0 0 10px var(--primary)); }
+        .header-left .brand-name { font-weight: 950; font-size: 1.4rem; color: var(--primary); letter-spacing: -1px; }
+        .header-left .brand-module { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); font-weight: 750; margin-left: 0.5rem; }
+        
+        .header-right { display: flex; align-items: center; gap: 1.5rem; }
+        .user-badge {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border);
+            padding: 0.6rem 1.25rem; border-radius: 1rem; color: white; font-size: 0.9rem; font-weight: 750;
+        }
+        .logout-btn {
+            background: transparent; border: 1px solid var(--glass-border);
+            color: var(--text-dim); padding: 0.6rem 1.25rem; border-radius: 1rem;
+            font-size: 0.85rem; font-weight: 750; cursor: pointer; transition: all 0.3s;
+        }
+        .logout-btn:hover { border-color: white; color: white; background: rgba(255,255,255,0.05); }
+
+        /* Main */
+        .main { flex: 1; max-width: 1400px; margin: 0 auto; width: 100%; padding: 8rem 2rem 4rem; display: grid; grid-template-columns: 1.8fr 1fr; gap: 2rem; position: relative; z-index: 10; }
+
+        /* Panel */
+        .panel {
+            overflow: hidden; display: flex; flex-direction: column; height: fit-content; max-height: 85vh;
+        }
+        .panel-header {
+            padding: 1.5rem 2rem; border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 0.8rem;
+            font-weight: 950; font-size: 1.1rem; color: white;
+            background: rgba(255,255,255,0.02);
+        }
+        .panel-header .count-badge {
+            margin-left: auto; font-size: 0.75rem; font-weight: 900;
+            padding: 0.4rem 1rem; border-radius: 999px;
+            background: var(--primary); color: white;
+        }
+        .panel-body { padding: 1.5rem 2rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent; }
+
+        /* Alert cards */
+        .alert-card {
+            padding: 1.75rem; border-radius: 1.25rem; border: 1px solid var(--glass-border);
+            margin-bottom: 1.25rem; transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255,255,255,0.02); position: relative;
+        }
+        .alert-card.critical { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+        .alert-card.high { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05); }
+        .alert-card.assigned { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.05); }
+        .alert-card.cleared { opacity: 0.5; filter: grayscale(0.5); }
+
+        .alert-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+        .alert-vehicle { display: flex; align-items: center; gap: 0.8rem; }
+        .alert-vehicle .emoji { font-size: 1.8rem; filter: drop-shadow(0 0 10px rgba(0,0,0,0.3)); }
+        .alert-vehicle .plate {
+            font-family: 'JetBrains Mono', monospace; font-weight: 800;
+            font-size: 1.1rem; color: white; letter-spacing: 1px;
+        }
+        .alert-priority {
+            font-size: 0.7rem; font-weight: 900; padding: 0.3rem 0.8rem;
+            border-radius: 999px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .alert-priority.critical { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .alert-priority.high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .alert-priority.standard { background: rgba(16, 185, 129, 0.2); color: var(--primary); }
+
+        .alert-meta { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem; line-height: 1.7; }
+        .alert-meta strong { color: white; font-weight: 800; }
+        
+        .alert-status-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.75rem; font-weight: 800; padding: 0.4rem 1rem; border-radius: 999px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .status-pending { background: rgba(251, 191, 36, 0.1); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.2); }
+        .status-assigned { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .status-clearing { background: rgba(16, 185, 129, 0.1); color: var(--primary); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-cleared { background: rgba(255, 255, 255, 0.05); color: var(--text-dim); border: 1px solid var(--glass-border); }
+
+        .assign-btn {
+            width: 100%; justify-content: center; margin-top: 1rem; padding: 0.9rem;
+        }
+
+        /* Officers panel */
+        .officer-card {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1.25rem; border-radius: 1.25rem; border: 1px solid var(--glass-border);
+            margin-bottom: 0.75rem; background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s;
+        }
+        .officer-card:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+
+        .officer-avatar {
+            width: 44px; height: 44px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900;
+            background: rgba(16, 185, 129, 0.1); color: var(--primary); border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .officer-info { flex: 1; }
+        .officer-name { font-size: 0.95rem; font-weight: 850; color: white; display: flex; align-items: center; gap: 0.5rem; }
+        .officer-email { font-size: 0.75rem; color: var(--text-dim); font-weight: 600; margin-top: 0.1rem; }
+        .officer-status {
+            width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+            border: 2px solid #020617;
+        }
+        .officer-status.active { background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+        .officer-status.inactive { background: #374151; }
+
+        .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-dim); }
+        .empty-state .emoji { font-size: 3rem; opacity: 0.2; margin-bottom: 1rem; }
+        .empty-state p { font-weight: 600; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(10px); z-index: 2000;
+            display: none; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #020617; border-radius: 2rem; padding: 2.5rem;
+            width: 100%; max-width: 500px; box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            border: 1px solid var(--glass-border); position: relative;
+        }
+        .modal h3 { font-size: 1.6rem; font-weight: 950; color: white; margin-bottom: 0.5rem; letter-spacing: -1px; }
+        .modal p { color: var(--text-dim); margin-bottom: 1.5rem; font-weight: 600; }
+        .modal-officer-list { max-height: 300px; overflow-y: auto; padding-right: 0.5rem; }
+        .modal-officer {
+            display: flex; align-items: center; gap: 1rem;
+            padding: 1.25rem; border-radius: 1.25rem; border: 1.5px solid var(--glass-border);
+            margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .modal-officer:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); }
+        .modal-officer.selected { border-color: var(--primary); background: rgba(16, 185, 129, 0.1); box-shadow: 0 0 20px rgba(16, 185, 129, 0.1); }
+        .modal-officer .name { font-weight: 850; font-size: 0.95rem; color: white; }
+        .modal-officer .status-text { font-size: 0.75rem; color: var(--primary); font-weight: 750; margin-top: 0.1rem; }
+        
+        .modal-actions { display: flex; gap: 1rem; margin-top: 2rem; }
+        .modal-actions button { flex: 1; padding: 1rem; border-radius: 999px; font-weight: 800; font-size: 0.95rem; }
+        .modal-cancel { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-dim); }
+        .modal-confirm { background: var(--primary); border: none; color: white; }
+        .modal-confirm:disabled { opacity: 0.5; filter: grayscale(1); }
+
+        /* Map Utility */
+        #map { height: 400px; width: 100%; border-radius: 1.5rem; border: 1px solid var(--glass-border); }
+        .alert-map-preview { height: 220px; width: 100%; border-radius: 1.25rem; margin: 1.5rem 0; border: 1px solid var(--glass-border); overflow: hidden; }
+        
+        .track-btn {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-dim); 
+            padding: 0.4rem 0.8rem; border-radius: 0.75rem; font-size: 0.75rem; font-weight: 750; cursor: pointer;
+            transition: all 0.3s;
+        }
+        .track-btn:hover { border-color: white; color: white; background: rgba(255, 255, 255, 0.1); }
+
+        .loading { text-align: center; padding: 4rem; color: var(--text-dim); font-weight: 600; }
+
+        /* Dark Map Adjustments */
+        .leaflet-container { background: #020617 !important; }
+        .leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+        @media (max-width: 1024px) {
+            .main { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .header { padding: 1rem 1.5rem; }
+            .main { padding: 8rem 1.5rem 4rem; }
+            .alert-card { padding: 1.25rem; }
+            .alert-top { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast"></div>
+
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="icon">🚨</div>
+            <div class="brand">
+                <span class="brand-name">GreenLink</span>
+                <span class="brand-module">Incharge Module</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="user-badge">👮 <span id="userName">Loading...</span></div>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+        <!-- Alerts Panel -->
+        <div class="panel glass-card reveal visible">
+            <div class="panel-header">
+                <span>🚨</span> Active Rescue Alerts
+                <span class="count-badge" id="alertCount">0</span>
+            </div>
+            <div class="panel-body" id="alertsContainer">
+                <div class="loading">Initializing system alerts...</div>
+            </div>
+        </div>
+
+        <!-- Officers Panel -->
+        <div class="panel glass-card reveal visible">
+            <div class="panel-header">
+                <span>👮</span> Personnel Status
+                <span class="count-badge" id="officerCount">0</span>
+            </div>
+            <div class="panel-body" id="officersContainer">
+                <div class="loading">Loading personnel data...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Assignment Modal -->
+    <div class="modal-overlay" id="assignModal">
+        <div class="modal">
+            <h3>Dispatch Officer</h3>
+            <p>Select an on-duty officer for <strong id="modalVehicle"></strong></p>
+            <div class="modal-officer-list" id="modalOfficerList"></div>
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeModal()">Abot</button>
+                <button class="modal-confirm btn-premium" id="confirmAssignBtn" disabled onclick="confirmAssignment()">Confirm Dispatch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Modal -->
+    <div class="modal-overlay" id="mapModal">
+        <div class="modal">
+            <h3 id="mapTitle">Tactical View</h3>
+            <p id="mapSubtitle">Real-time GPS coordination</p>
+            <div id="map"></div>
+            <div class="modal-actions">
+                <button class="modal-confirm btn-premium" onclick="closeMapModal()">Close View</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { protectPage, getUserData, logoutUser, listenAlerts, listenActiveOfficers, assignAlert } from "./js/auth.js";
+
+        let allOfficers = [];
+        let selectedOfficerId = null;
+        let currentAlertId = null;
+
+        const vehicleEmoji = { ambulance: '🚑', fire_engine: '🚒', police: '🚓' };
+
+        // Auth guard
+        const user = await protectPage("incharge");
+        const userData = await getUserData(user.uid);
+        document.getElementById("userName").textContent = userData?.name || "Incharge";
+
+        // Logout
+        document.getElementById("logoutBtn").addEventListener("click", () => logoutUser());
+
+        const mapInstances = {};
+
+        // ── Listen to alerts in real-time ──
+        listenAlerts((alerts) => {
+            const container = document.getElementById("alertsContainer");
+            const pendingCount = alerts.filter(a => a.status === "pending").length;
+            document.getElementById("alertCount").textContent = pendingCount;
+
+            if (alerts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="emoji">✅</div><p>No active alerts</p></div>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(a => {
+                const emoji = vehicleEmoji[a.vehicleType] || '🚗';
+                const time = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleTimeString() : 'Just now';
+
+                let statusBadge = '';
+                let assignBtn = '';
+                
+                if (a.status === 'pending') {
+                    statusBadge = '<span class="alert-status-badge status-pending">⏳ Pending</span>';
+                    assignBtn = `<button class="assign-btn" data-id="${a.id}" data-vehicle="${emoji} ${a.vehicleNumber}">Assign Officer →</button>`;
+                } else if (a.status === 'assigned') {
+                    statusBadge = `<span class="alert-status-badge status-assigned">👮 Assigned: ${a.assignedOfficerName || 'Officer'}</span>`;
+                } else if (a.status === 'clearing') {
+                    statusBadge = `<span class="alert-status-badge status-clearing">🚦 Clearing in progress</span>`;
+                } else if (a.status === 'cleared') {
+                    statusBadge = `<span class="alert-status-badge status-cleared">✅ Cleared</span>`;
+                }
+
+                // Show map if we have location and not cleared
+                const mapHtml = (a.location && a.status !== 'cleared') ? `<div id="map-${a.id}" class="alert-map-preview"></div>` : '';
+
+                return `
+                    <div class="alert-card ${a.priority} ${a.status}">
+                        <div class="alert-top">
+                            <div class="alert-vehicle">
+                                <span class="emoji">${emoji}</span>
+                                <span class="plate">${a.vehicleNumber}</span>
+                            </div>
+                            <span class="alert-priority ${a.priority}">${a.priority}</span>
+                        </div>
+                        <div class="alert-meta">
+                            🧑 ${a.driverName} · 📞 ${a.driverPhone}<br>
+                            📍 <strong>From:</strong> GPS detected &rarr; <strong>To:</strong> ${a.destination || a.route}<br>
+                            ⏰ ${time}
+                        </div>
+                        ${mapHtml}
+                        ${statusBadge}
+                        ${assignBtn}
+                    </div>
+                `;
+            }).join('');
+
+            // Initialize or update maps for each alert
+            alerts.forEach(a => {
+                const mapId = `map-${a.id}`;
+                const mapEl = document.getElementById(mapId);
+                if (!mapEl || !a.location) return;
+
+                const lat = a.location.latitude;
+                const lng = a.location.longitude;
+
+                if (!mapInstances[a.id]) {
+                    const m = L.map(mapId, { zoomControl: false }).setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+                    const marker = L.marker([lat, lng]).addTo(m);
+                    mapInstances[a.id] = { map: m, marker: marker };
+                } else {
+                    mapInstances[a.id].map.setView([lat, lng]);
+                    mapInstances[a.id].marker.setLatLng([lat, lng]);
+                }
+            });
+
+            // Attach click handlers to assign buttons
+            container.querySelectorAll('.assign-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentAlertId = btn.dataset.id;
+                    document.getElementById("modalVehicle").textContent = btn.dataset.vehicle;
+                    openModal();
+                });
+            });
+        });
+
+        // ── Listen to officers in real-time ──
+        listenActiveOfficers((officers) => {
+            allOfficers = officers;
+            const container = document.getElementById("officersContainer");
+            const activeCount = officers.filter(o => o.isActive).length;
+            document.getElementById("officerCount").textContent = activeCount;
+
+            if (officers.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="emoji">👮</div><p>No registered officers</p></div>';
+                return;
+            }
+
+            container.innerHTML = officers.map(o => {
+                const initials = (o.name || 'O').charAt(0).toUpperCase();
+                const hasLocation = o.location ? `<button class="track-btn track-officer" data-id="${o.id}" data-name="${o.name}" data-lat="${o.location.latitude}" data-lng="${o.location.longitude}">📍 Track</button>` : '';
+                return `
+                    <div class="officer-card">
+                        <div class="officer-avatar">${initials}</div>
+                        <div class="officer-info">
+                            <div class="officer-name">${o.name} ${hasLocation}</div>
+                            <div class="officer-email">${o.email}</div>
+                        </div>
+                        <div class="officer-status ${o.isActive ? 'active' : 'inactive'}"></div>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.track-officer').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    openMapModal(btn.dataset.name, btn.dataset.lat, btn.dataset.lng);
+                });
+            });
+        });
+
+        // ── Modal logic ──
+        window.openModal = function () {
+            selectedOfficerId = null;
+            document.getElementById("confirmAssignBtn").disabled = true;
+            const modal = document.getElementById("assignModal");
+            const list = document.getElementById("modalOfficerList");
+
+            const activeOfficers = allOfficers.filter(o => o.isActive);
+            if (activeOfficers.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>No active officers available</p></div>';
+            } else {
+                list.innerHTML = activeOfficers.map(o => `
+                    <div class="modal-officer" data-id="${o.id}" data-name="${o.name}">
+                        <div class="officer-avatar">${(o.name || 'O').charAt(0).toUpperCase()}</div>
+                        <div>
+                            <div class="name">${o.name}</div>
+                            <div class="status-text">🟢 On Duty</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                list.querySelectorAll('.modal-officer').forEach(el => {
+                    el.addEventListener('click', () => {
+                        list.querySelectorAll('.modal-officer').forEach(e => e.classList.remove('selected'));
+                        el.classList.add('selected');
+                        selectedOfficerId = el.dataset.id;
+                        window._selectedOfficerName = el.dataset.name;
+                        document.getElementById("confirmAssignBtn").disabled = false;
+                    });
+                });
+            }
+
+            modal.classList.add("open");
+        };
+
+        window.closeModal = function () {
+            document.getElementById("assignModal").classList.remove("open");
+        };
+
+        window.confirmAssignment = async function () {
+            if (!selectedOfficerId || !currentAlertId) return;
+            const btn = document.getElementById("confirmAssignBtn");
+            btn.disabled = true;
+            btn.textContent = "Assigning...";
+
+            try {
+                await assignAlert(currentAlertId, selectedOfficerId, window._selectedOfficerName);
+                closeModal();
+            } catch (err) {
+                alert("Failed to assign: " + err.message);
+            }
+            btn.disabled = false;
+            btn.textContent = "Assign Officer";
+        };
+
+        // ── Map Tracking Logic ──
+        let map = null;
+        let marker = null;
+
+        window.openMapModal = function(title, lat, lng) {
+            document.getElementById("mapTitle").textContent = title;
+            document.getElementById("mapModal").classList.add("open");
+
+            if (!map) {
+                map = L.map('map').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                marker = L.marker([lat, lng]).addTo(map);
+            } else {
+                map.setView([lat, lng], 15);
+                marker.setLatLng([lat, lng]);
+            }
+            
+            // Fix Leaflet resize bug in hidden containers
+            setTimeout(() => map.invalidateSize(), 300);
+        };
+
+        window.closeMapModal = function() {
+            document.getElementById("mapModal").classList.remove("open");
+        };
+    </script>
+</body>
+
+</html>

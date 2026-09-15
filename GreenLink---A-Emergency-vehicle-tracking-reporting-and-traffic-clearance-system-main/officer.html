@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Officer Dashboard | GreenLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/global.css">
+    <!-- Leaflet Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 1rem 3rem;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+        }
+        .header-left { display: flex; align-items: center; gap: 0.8rem; }
+        .header-left .icon { font-size: 1.5rem; filter: drop-shadow(0 0 10px var(--primary)); }
+        .header-left .brand-name { font-weight: 950; font-size: 1.4rem; color: var(--primary); letter-spacing: -1px; }
+        .header-left .brand-module { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); font-weight: 750; margin-left: 0.5rem; }
+        
+        .header-right { display: flex; align-items: center; gap: 1.5rem; }
+        .user-badge {
+            display: flex; align-items: center; gap: 0.6rem;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border);
+            padding: 0.6rem 1.25rem; border-radius: 1rem; color: white; font-size: 0.9rem; font-weight: 750;
+        }
+        .logout-btn {
+            background: transparent; border: 1px solid var(--glass-border);
+            color: var(--text-dim); padding: 0.6rem 1.25rem; border-radius: 1rem;
+            font-size: 0.85rem; font-weight: 750; cursor: pointer; transition: all 0.3s;
+        }
+        .logout-btn:hover { border-color: white; color: white; background: rgba(255,255,255,0.05); }
+
+        .main { flex: 1; max-width: 900px; margin: 0 auto; width: 100%; padding: 8rem 2rem 4rem; position: relative; z-index: 10; }
+
+        /* Duty toggle */
+        .duty-panel {
+            padding: 2.5rem 3rem; margin-bottom: 2rem;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .duty-info h2 { font-size: 1.4rem; font-weight: 950; color: white; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+        .duty-info p { font-size: 0.95rem; color: var(--text-dim); }
+        .duty-info .status-label {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            font-size: 0.85rem; font-weight: 800; margin-top: 1rem;
+            padding: 0.5rem 1.25rem; border-radius: 999px;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .status-active { background: rgba(16, 185, 129, 0.1); color: var(--primary); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        /* Toggle switch */
+        .toggle-switch { position: relative; width: 70px; height: 38px; }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.05); border: 1.5px solid var(--glass-border); border-radius: 999px;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toggle-slider::before {
+            content: ''; position: absolute; left: 4px; top: 4px;
+            width: 27px; height: 27px; border-radius: 50%;
+            background: var(--text-dim); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .toggle-switch input:checked + .toggle-slider { background: rgba(16, 185, 129, 0.2); border-color: var(--primary); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(31px); background: var(--primary); box-shadow: 0 0 15px var(--primary); }
+
+        /* Assignments */
+        .panel {
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 1.5rem 2.5rem; border-bottom: 1px solid var(--glass-border);
+            display: flex; align-items: center; gap: 0.8rem;
+            font-weight: 900; font-size: 1.1rem; color: white;
+            background: rgba(255,255,255,0.02);
+        }
+        .panel-header .count-badge {
+            margin-left: auto; font-size: 0.75rem; font-weight: 900;
+            padding: 0.4rem 1rem; border-radius: 999px;
+            background: var(--primary); color: white;
+        }
+        .panel-body { padding: 2rem 2.5rem; }
+
+        .assignment-card {
+            padding: 2.5rem; border-radius: 1.5rem; border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.02); margin-bottom: 2rem; 
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative; overflow: hidden;
+        }
+        .assignment-card.assigned { border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.03); }
+        .assignment-card.clearing { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.03); }
+        .assignment-card.cleared { opacity: 0.5; filter: grayscale(0.5); }
+
+        .assignment-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+        .assignment-vehicle { display: flex; align-items: center; gap: 0.8rem; }
+        .assignment-vehicle .emoji { font-size: 2.2rem; filter: drop-shadow(0 0 10px rgba(0,0,0,0.3)); }
+        .assignment-vehicle .plate {
+            font-family: 'JetBrains Mono', monospace; font-weight: 800;
+            font-size: 1.4rem; color: white; letter-spacing: 1px;
+        }
+        .assignment-priority {
+            font-size: 0.75rem; font-weight: 800; padding: 0.4rem 1.25rem;
+            border-radius: 999px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .assignment-priority.critical { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .assignment-priority.high { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .assignment-priority.standard { background: rgba(16, 185, 129, 0.1); color: var(--primary); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+        .assignment-details { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+        .detail-item .label { color: var(--text-dim); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; }
+        .detail-item .value { color: white; font-weight: 800; font-size: 1rem; }
+
+        .action-btn {
+            width: 100%; padding: 1.1rem; border-radius: 1.25rem;
+            font-size: 1rem; font-weight: 800; 
+        }
+        .btn-clearing { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; box-shadow: 0 10px 25px rgba(245, 158, 11, 0.2); }
+        .btn-cleared { background: linear-gradient(135deg, #059669, #10b981); color: white; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2); }
+        .btn-done { background: rgba(255,255,255,0.05); color: var(--text-dim); cursor: default; border: 1px solid var(--glass-border); }
+
+        .empty-state { text-align: center; padding: 4rem 2rem; }
+        .empty-state .emoji { font-size: 4rem; opacity: 0.2; margin-bottom: 1.5rem; }
+        .empty-state p { font-size: 1.1rem; color: var(--text-dim); font-weight: 600; }
+
+        /* Modal & Map */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(10px); z-index: 2000;
+            display: none; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #020617; border-radius: 2rem; padding: 2.5rem;
+            width: 100%; max-width: 700px; box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+            border: 1px solid var(--glass-border); position: relative;
+        }
+        .modal h3 { font-size: 1.8rem; font-weight: 950; color: white; margin-bottom: 0.5rem; letter-spacing: -1px; }
+        .modal p { color: var(--text-dim); margin-bottom: 2rem; font-weight: 600; }
+        
+        #map { height: 400px; width: 100%; border-radius: 1.5rem; border: 1px solid var(--glass-border); }
+        .assignment-map-preview { height: 220px; width: 100%; border-radius: 1.25rem; margin: 1.5rem 0; border: 1px solid var(--glass-border); overflow: hidden; }
+        
+        .modal-actions { margin-top: 2rem; display: flex; justify-content: flex-end; }
+        .modal-close { background: var(--primary); color: white; border: none; padding: 0.9rem 2rem; border-radius: 999px; font-weight: 800; cursor: pointer; transition: all 0.3s; }
+        .modal-close:hover { box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3); transform: translateY(-2px); }
+
+        /* Dark Map Adjustments */
+        .leaflet-container { background: #020617 !important; }
+        .leaflet-tile { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+        @media (max-width: 768px) {
+            .header { padding: 1rem 1.5rem; }
+            .header-right { gap: 0.8rem; }
+            .user-badge { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+            .main { padding: 8rem 1.5rem 4rem; }
+            .duty-panel { padding: 2rem; flex-direction: column; gap: 1.5rem; text-align: center; }
+            .assignment-card { padding: 1.5rem; }
+            .assignment-details { grid-template-columns: 1fr; gap: 1rem; }
+            .assignment-vehicle .plate { font-size: 1.1rem; }
+        }
+    </style>
+
+        .modal-close { background: #059669; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer; }
+
+        @media (max-width: 640px) {
+            .main { padding: 1rem; }
+            .duty-panel { flex-direction: column; gap: 1rem; text-align: center; }
+            .assignment-details { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast"></div>
+
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <header class="header">
+        <div class="header-left">
+            <div class="icon">🚨</div>
+            <div class="brand">
+                <span class="brand-name">GreenLink</span>
+                <span class="brand-module">Officer Terminal</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="user-badge">🚔 <span id="userName">Loading...</span></div>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Duty Toggle -->
+        <div class="duty-panel glass-card reveal visible">
+            <div class="duty-info">
+                <h2>Command Center Access</h2>
+                <p>Toggle your on-duty status to receive rescue assignments.</p>
+                <div class="status-label status-inactive" id="statusLabel">🔴 Off Duty</div>
+            </div>
+            <div class="toggle-switch">
+                <input type="checkbox" id="dutyToggle">
+                <label class="toggle-slider" for="dutyToggle"></label>
+            </div>
+        </div>
+
+        <!-- Assigned Alerts -->
+        <div class="panel glass-card reveal visible">
+            <div class="panel-header">
+                <span>📋</span> Rescue Assignments
+                <span class="count-badge" id="assignCount">0</span>
+            </div>
+            <div class="panel-body" id="assignmentsContainer">
+                <div class="empty-state">
+                    <div class="emoji">📋</div>
+                    <p>No assignments yet. Go on duty to receive alerts.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Map Modal -->
+    <div class="modal-overlay" id="mapModal">
+        <div class="modal">
+            <h3 id="mapTitle">Vehicle Tracker</h3>
+            <p>Tracking live GPS location of the emergency vehicle</p>
+            <div id="map"></div>
+            <div class="modal-actions">
+                <button class="modal-close" onclick="closeMapModal()">Close Tracker</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { protectPage, getUserData, logoutUser, toggleOfficerStatus, listenOfficerAlerts, updateAlertStatus } from "./js/auth.js";
+
+        const vehicleEmoji = { ambulance: '🚑', fire_engine: '🚒', police: '🚓' };
+
+        // Auth guard (officer only)
+        const user = await protectPage("officer");
+        const userData = await getUserData(user.uid);
+        document.getElementById("userName").textContent = userData?.name || "Officer";
+
+        // Set initial duty status
+        const dutyToggle = document.getElementById("dutyToggle");
+        const statusLabel = document.getElementById("statusLabel");
+
+        let locationInterval = null;
+
+        if (userData?.isActive) {
+            dutyToggle.checked = true;
+            statusLabel.className = "status-label status-active";
+            statusLabel.textContent = "🟢 On Duty";
+            startLocationTracking();
+        }
+
+        dutyToggle.addEventListener("change", async () => {
+            const isActive = dutyToggle.checked;
+            statusLabel.className = "status-label " + (isActive ? "status-active" : "status-inactive");
+            statusLabel.textContent = isActive ? "🟢 On Duty" : "🔴 Off Duty";
+            
+            if (isActive) {
+                startLocationTracking();
+            } else {
+                if (locationInterval) clearInterval(locationInterval);
+            }
+            
+            await toggleOfficerStatus(user.uid, isActive);
+        });
+
+        // Logout
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+             if (locationInterval) clearInterval(locationInterval);
+             logoutUser();
+        });
+
+        import { updateOfficerLocation } from "./js/auth.js";
+
+        function startLocationTracking() {
+            if (!navigator.geolocation) return;
+            
+            // Initial update
+            navigator.geolocation.getCurrentPosition((pos) => {
+                updateOfficerLocation(user.uid, pos.coords.latitude, pos.coords.longitude);
+            });
+
+            // Every 10 seconds for officers
+            locationInterval = setInterval(() => {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        updateOfficerLocation(user.uid, pos.coords.latitude, pos.coords.longitude)
+                            .catch(err => console.error("Officer location update failed", err));
+                    },
+                    (err) => console.warn(err),
+                    { enableHighAccuracy: true }
+                );
+            }, 10000);
+        }
+
+        const mapInstances = {};
+
+        // Listen to assigned alerts in real-time
+        listenOfficerAlerts(user.uid, (alerts) => {
+            const container = document.getElementById("assignmentsContainer");
+            const activeAlerts = alerts.filter(a => a.status !== "cleared");
+            document.getElementById("assignCount").textContent = activeAlerts.length;
+
+            if (alerts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">📋</div>
+                        <p>No assignments yet. Go on duty to receive alerts.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = alerts.map(a => {
+                const emoji = vehicleEmoji[a.vehicleType] || '🚗';
+                const time = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleTimeString() : 'Just now';
+
+                let actionBtn = '';
+                if (a.status === 'assigned') {
+                    actionBtn = `<button class="action-btn btn-clearing" data-id="${a.id}" data-action="clearing">🚦 Start Clearing Road</button>`;
+                } else if (a.status === 'clearing') {
+                    actionBtn = `<button class="action-btn btn-cleared" data-id="${a.id}" data-action="cleared">✅ Mark As Cleared</button>`;
+                } else if (a.status === 'cleared') {
+                    actionBtn = `<button class="action-btn btn-done" disabled>✅ Completed</button>`;
+                }
+
+                // Show map if we have location and not cleared
+                const mapHtml = (a.location && a.status !== 'cleared') ? `<div id="map-${a.id}" class="assignment-map-preview"></div>` : '';
+
+                return `
+                    <div class="assignment-card ${a.status}">
+                        <div class="assignment-top">
+                            <div class="assignment-vehicle">
+                                <span class="emoji">${emoji}</span>
+                                <span class="plate">${a.vehicleNumber}</span>
+                            </div>
+                            <span class="assignment-priority ${a.priority}">${a.priority}</span>
+                        </div>
+                        <div class="assignment-details">
+                            <div class="detail-item">
+                                <div class="label">Driver</div>
+                                <div class="value">${a.driverName}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="label">Phone</div>
+                                <div class="value">${a.driverPhone}</div>
+                            </div>
+                            <div class="detail-item" style="grid-column: 1 / -1;">
+                                <div class="label">Route</div>
+                                <div class="value">📍 From: GPS detected &rarr; To: ${a.destination || a.route}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="label">Reported At</div>
+                                <div class="value">${time}</div>
+                            </div>
+                        </div>
+                        ${mapHtml}
+                        ${actionBtn}
+                    </div>
+                `;
+            }).join('');
+
+            // Initialize or update maps for each assignment
+            alerts.forEach(a => {
+                const mapId = `map-${a.id}`;
+                const mapEl = document.getElementById(mapId);
+                if (!mapEl || !a.location) return;
+
+                const lat = a.location.latitude;
+                const lng = a.location.longitude;
+
+                if (!mapInstances[a.id]) {
+                    const m = L.map(mapId, { zoomControl: false }).setView([lat, lng], 15);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+                    const marker = L.marker([lat, lng]).addTo(m);
+                    mapInstances[a.id] = { map: m, marker: marker };
+                } else {
+                    mapInstances[a.id].map.setView([lat, lng]);
+                    mapInstances[a.id].marker.setLatLng([lat, lng]);
+                }
+            });
+
+            // Action buttons
+            container.querySelectorAll('.action-btn:not([disabled])').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const alertId = btn.dataset.id;
+                    const action = btn.dataset.action;
+                    btn.disabled = true;
+                    btn.textContent = 'Updating...';
+                    try {
+                        await updateAlertStatus(alertId, action);
+                    } catch (err) {
+                        alert('Error: ' + err.message);
+                        btn.disabled = false;
+                    }
+                });
+            });
+        });
+
+        // ── Map Logic ──
+        let map = null;
+        let marker = null;
+
+        window.openMapModal = function(title, lat, lng) {
+            document.getElementById("mapTitle").textContent = title;
+            document.getElementById("mapModal").classList.add("open");
+
+            if (!map) {
+                map = L.map('map').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                marker = L.marker([lat, lng]).addTo(map);
+            } else {
+                map.setView([lat, lng], 15);
+                marker.setLatLng([lat, lng]);
+            }
+            
+            setTimeout(() => map.invalidateSize(), 300);
+        };
+
+        window.closeMapModal = function() {
+            document.getElementById("mapModal").classList.remove("open");
+        };
+    </script>
+</body>
+
+</html>

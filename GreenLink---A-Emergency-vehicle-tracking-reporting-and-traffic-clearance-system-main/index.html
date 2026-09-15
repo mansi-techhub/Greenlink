@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenLink — Emergency Vehicle Priority System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles/global.css">
+    <style>
+        .section-inner {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 5rem 2rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* ─── Navbar ─── */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 0;
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            transition: all 0.4s;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+
+        .nav-brand .icon {
+            font-size: 1.5rem;
+            filter: drop-shadow(0 0 10px var(--primary));
+        }
+
+        .nav-brand .name {
+            font-weight: 900;
+            font-size: 1.4rem;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            background: var(--primary) !important;
+            color: #ffffff !important;
+            padding: 0.6rem 1.6rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: all 0.3s;
+            border: none;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4);
+            color: #ffffff !important;
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* ─── 3D Perspective Container ─── */
+        .scene {
+            perspective: 2000px;
+            overflow-x: hidden;
+        }
+
+        /* ─── Sections ─── */
+        section {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ─── HERO ─── */
+        .hero {
+            background: transparent;
+        }
+
+        .hero-bg-grid {
+            position: absolute;
+            inset: 0;
+            opacity: 0.08;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%2310b981' fill-opacity='1'%3E%3Cpath d='M0 0h1v60H0zM60 0h1v60h-1zM0 0v1h61V0zM0 60v1h61v-1z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .hero-content {
+            text-align: center;
+            z-index: 10;
+            max-width: 800px;
+            padding: 0 1.5rem;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 0.5rem 1.3rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-badge .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 7vw, 5rem);
+            font-weight: 950;
+            line-height: 1;
+            letter-spacing: -3px;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 40%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            line-height: 1.8;
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+
+        .hero-cta-row {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 4rem;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 4rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat .num {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: white;
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .hero-stat .label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Floating 3D Elements */
+        .float-el {
+            position: absolute;
+            pointer-events: none;
+            font-size: 4rem;
+            opacity: 0.4;
+            filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.3));
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+        }
+
+        /* Scroll indicator */
+        .scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .scroll-line {
+            width: 2px;
+            height: 50px;
+            background: linear-gradient(to bottom, var(--primary), transparent);
+            animation: scrollLine 2s infinite ease-in-out;
+            border-radius: 99px;
+        }
+
+        @keyframes scrollLine {
+            0% {
+                transform: scaleY(0);
+                transform-origin: top;
+                opacity: 0;
+            }
+
+            50% {
+                transform: scaleY(1);
+                transform-origin: top;
+                opacity: 1;
+            }
+
+            100% {
+                transform: scaleY(0);
+                transform-origin: bottom;
+                opacity: 0;
+            }
+        }
+
+        /* ─── HOW IT WORKS ─── */
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-desc {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+            max-width: 600px;
+            line-height: 1.8;
+            margin-bottom: 5rem;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2.5rem;
+        }
+
+        .step-card {
+            padding: 3rem 2rem;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-num {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 6rem;
+            font-weight: 950;
+            color: rgba(255, 255, 255, 0.03);
+            line-height: 0.8;
+        }
+
+        .step-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-card h3 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .step-card p {
+            font-size: 1rem;
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+
+        /* ─── FEATURES ─── */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            padding: 2.5rem;
+            text-align: left;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin-bottom: 1.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: var(--primary);
+        }
+
+        /* ─── MODULES ─── */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .module-card {
+            display: block;
+            text-decoration: none;
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            display: block;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .module-card:hover .module-icon {
+            transform: scale(1.2) translateY(-10px);
+        }
+
+        .module-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 1.5rem;
+        }
+
+        /* ─── FOOTER ─── */
+        .footer {
+            padding-top: 10rem;
+        }
+
+        .footer-bottom {
+            margin-top: 8rem;
+            padding: 3rem 0;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 1024px) {
+
+            .steps-grid,
+            .features-grid,
+            .modules-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 0.8rem 0;
+            }
+
+            .nav-container {
+                padding: 0 1.5rem;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .steps-grid,
+            .features-grid,
+            .modules-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 3.5rem;
+            }
+
+            .hero-stats {
+                gap: 1.5rem;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero-cta-row {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-bg">
+        <canvas id="particle-canvas"></canvas>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-brand">
+                <span class="icon">🚨</span>
+                <span class="name">GreenLink</span>
+            </a>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="#modules">Modules</a>
+                <a href="login.html" class="nav-cta">Staff Login</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="scene">
+
+        <!-- ═══ SECTION 1: HERO ═══ -->
+        <section class="hero" id="hero">
+            <div class="hero-bg-grid"></div>
+
+            <div class="float-el" style="top: 15%; left: 8%;">🚑</div>
+            <div class="float-el" style="top: 25%; right: 10%;">🚒</div>
+            <div class="float-el" style="bottom: 20%; left: 12%;">🚓</div>
+            <div class="float-el" style="bottom: 30%; right: 8%;">🚦</div>
+
+            <div class="hero-content">
+                <div class="hero-badge reveal">
+                    <span class="pulse-dot"></span>
+                    System Active — Real-Time Coordination
+                </div>
+                <h1 class="reveal">Clearing the Way for Those Who Save Lives</h1>
+                <p class="reveal">
+                    Real-time coordination between emergency vehicles, traffic incharge, and on-duty officers.
+                    Every second counts.
+                </p>
+                <div class="hero-cta-row reveal">
+                    <a href="driver.html" class="btn-premium">🚑 Report Emergency</a>
+                    <a href="login.html" class="btn-ghost">👮 Staff Login</a>
+                </div>
+                <div class="hero-stats reveal">
+                    <div class="hero-stat">
+                        <span class="num" data-count="5">0</span>
+                        <span class="label">Seconds to Alert</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="num" data-count="3">0</span>
+                        <span class="label">Module System</span>
+                    </div>
+                    <div class="hero-stat">
+                        <span class="num">24/7</span>
+                        <span class="label">Always On</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scroll-hint">
+                <span>Scroll</span>
+                <div class="scroll-line"></div>
+            </div>
+        </section>
+
+        <!-- ═══ SECTION 2: HOW IT WORKS ═══ -->
+        <section class="how-it-works" id="how-it-works">
+            <div class="section-inner">
+                <div class="section-label reveal">⚡ Process Flow</div>
+                <h2 class="section-title reveal">How GreenLink Works</h2>
+                <p class="section-desc reveal">
+                    From emergency departure to road clearance — a seamless, real-time pipeline powered by Firebase.
+                </p>
+
+                <div class="steps-grid">
+                    <div class="step-card glass-card reveal">
+                        <div class="step-num">01</div>
+                        <div class="step-icon">🚨</div>
+                        <h3>Emergency Reported</h3>
+                        <p>Driver submits a departure alert with vehicle details, route, and priority level. No login
+                            required.</p>
+                    </div>
+                    <div class="step-card glass-card reveal">
+                        <div class="step-num">02</div>
+                        <div class="step-icon">📡</div>
+                        <h3>Incharge Assigns</h3>
+                        <p>Traffic Incharge receives real-time alerts and assigns the nearest available on-duty officer.
+                        </p>
+                    </div>
+                    <div class="step-card glass-card reveal">
+                        <div class="step-num">03</div>
+                        <div class="step-icon">✅</div>
+                        <h3>Road Cleared</h3>
+                        <p>The officer clears the route. The driver sees live status updates until the road is clear.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SECTION 3: FEATURES ═══ -->
+        <section class="features" id="features">
+            <div class="section-inner">
+                <div class="section-label reveal">🛡️ Core Capabilities</div>
+                <h2 class="section-title reveal">Built for Speed & Safety</h2>
+                <p class="section-desc reveal">
+                    Every feature is designed with one goal: saving precious seconds during emergencies.
+                </p>
+
+                <div class="features-grid">
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">📍</div>
+                        <h3>Live GPS Tracking</h3>
+                        <p>Track emergency vehicles and officers in real-time on interactive maps powered by Leaflet.
+                        </p>
+                    </div>
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Instant Alerts</h3>
+                        <p>Firebase real-time listeners ensure alerts appear on dashboards within milliseconds.</p>
+                    </div>
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">🚦</div>
+                        <h3>Signal Priority</h3>
+                        <p>Priority-based alert system ensures critical emergencies are handled first.</p>
+                    </div>
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">🔐</div>
+                        <h3>Role-Based Access</h3>
+                        <p>Secure authentication with distinct dashboards for Incharge and Officers.</p>
+                    </div>
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">📱</div>
+                        <h3>Responsive Design</h3>
+                        <p>Works seamlessly on desktop, tablet, and mobile devices for field officers.</p>
+                    </div>
+                    <div class="feature-card glass-card reveal">
+                        <div class="feature-icon">📊</div>
+                        <h3>Status Pipeline</h3>
+                        <p>4-step status flow: Pending → Assigned → Clearing → Cleared with live updates.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SECTION 4: MODULES ═══ -->
+        <section class="modules" id="modules">
+            <div class="section-inner">
+                <div class="section-label reveal">🧩 Three Modules</div>
+                <h2 class="section-title reveal">One System, Three Roles</h2>
+                <p class="section-desc reveal">
+                    Each user has a dedicated interface optimized for their specific role in the emergency pipeline.
+                </p>
+
+                <div class="modules-grid">
+                    <a href="driver.html" class="module-card glass-card reveal">
+                        <span class="module-icon">🚑</span>
+                        <h3>Emergency Vehicle</h3>
+                        <p>Quick departure form with priority levels. No login needed — report and track in seconds.</p>
+                        <span class="module-link">Open Module →</span>
+                    </a>
+                    <a href="login.html" class="module-card glass-card reveal">
+                        <span class="module-icon">📋</span>
+                        <h3>Traffic Incharge</h3>
+                        <p>Command center dashboard with live alerts, officer management, and GPS tracking on maps.</p>
+                        <span class="module-link">Staff Login →</span>
+                    </a>
+                    <a href="login.html" class="module-card glass-card reveal">
+                        <span class="module-icon">🚔</span>
+                        <h3>Traffic Police</h3>
+                        <p>Duty toggle, assigned clearance tasks, and live vehicle tracking for field officers.</p>
+                        <span class="module-link">Staff Login →</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SECTION 5: FOOTER CTA ═══ -->
+        <section class="footer" id="footer">
+            <div class="section-inner">
+                <h2 class="reveal">Ready to Save Lives?</h2>
+                <p class="reveal">
+                    GreenLink keeps emergency routes clear with real-time coordination. Get started now.
+                </p>
+                <div class="hero-cta-row reveal">
+                    <a href="driver.html" class="btn-premium">🚑 Report Emergency</a>
+                    <a href="choose-profile.html" class="btn-ghost">🧩 Choose Your Role</a>
+                </div>
+
+                <div class="footer-bottom">
+                    <span>© 2026 GreenLink — Emergency Vehicle Priority System</span>
+                    <div class="footer-links">
+                        <a href="choose-profile.html">Roles</a>
+                        <a href="login.html">Login</a>
+                        <a href="register.html">Register</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div><!-- .scene -->
+
+
+    <script>
+        // ── IntersectionObserver for scroll-reveal ──
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // ── Navbar background on scroll ──
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 80) {
+                navbar.style.background = 'rgba(2, 10, 4, 0.92)';
+                navbar.style.borderBottomColor = 'rgba(255,255,255,0.1)';
+            } else {
+                navbar.style.background = 'rgba(2, 10, 4, 0.6)';
+                navbar.style.borderBottomColor = 'rgba(255,255,255,0.06)';
+            }
+        });
+
+        // ── Count-up animation for stats ──
+        const counters = document.querySelectorAll('.num[data-count]');
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const target = parseInt(el.dataset.count);
+                    let current = 0;
+                    const step = () => {
+                        current++;
+                        el.textContent = current;
+                        if (current < target) requestAnimationFrame(step);
+                    };
+                    step();
+                    counterObserver.unobserve(el);
+                }
+            });
+        }, { threshold: 0.5 });
+        counters.forEach(c => counterObserver.observe(c));
+
+        // ── 3D Parallax on mouse move (hero only) ──
+        const hero = document.querySelector('.hero');
+        const floatEls = document.querySelectorAll('.float-el');
+        hero.addEventListener('mousemove', (e) => {
+            const rect = hero.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            floatEls.forEach((el, i) => {
+                const depth = (i + 1) * 12;
+                el.style.transform = `translate(${x * depth}px, ${y * depth}px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg)`;
+            });
+        });
+    </script>
+    <script src="js/particles.js"></script>
+</body>
+
+</html>
