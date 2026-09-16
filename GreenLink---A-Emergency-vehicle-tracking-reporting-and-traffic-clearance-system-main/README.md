@@ -31,6 +31,21 @@ Driver sees live status: Pending → Assigned → Clearing → Cleared
 - **Backend:** Firebase Authentication + Firestore (real-time `onSnapshot`)
 - **Fonts:** Inter, JetBrains Mono
 
+## 🌐 Deploy and Share
+
+This project is a static website and is configured to deploy automatically to GitHub Pages.
+
+1. Push the repository to GitHub on the `main` branch.
+2. Open **Settings → Pages** in the GitHub repository.
+3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+4. Open the completed **Deploy GreenLink to GitHub Pages** workflow.
+
+The recruiter-facing link will be:
+
+**https://mansi-techhub.github.io/Greenlink/**
+
+Every future push to `main` will update the same link automatically. The landing page is the best link to share because it lets a recruiter explore the driver, incharge, and officer modules.
+
 ## 📁 File Structure
 
 ```
