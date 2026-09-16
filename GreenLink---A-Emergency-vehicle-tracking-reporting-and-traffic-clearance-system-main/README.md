@@ -40,9 +40,9 @@ This project is a static website and is configured to deploy automatically to Gi
 3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
 4. Open the completed **Deploy GreenLink to GitHub Pages** workflow.
 
-The recruiter-facing link will be:
+The recruiter-facing link is:
 
-**https://mansi-techhub.github.io/Greenlink/**
+### [🚨 Open the GreenLink live demo](https://mansi-techhub.github.io/Greenlink/)
 
 Every future push to `main` will update the same link automatically. The landing page is the best link to share because it lets a recruiter explore the driver, incharge, and officer modules.
 
